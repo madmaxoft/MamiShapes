@@ -1,0 +1,189 @@
+-- Hexagons.lua
+
+-- Generates SVG files of the hexagonal shapes
+
+
+
+
+
+local svg = require("SvgWriter")
+
+
+
+
+local base = 10
+local scale = 1000
+
+
+
+
+
+local circle = function(cx, cy, radius)
+	return function(aDrawing)
+		aDrawing:addCircle(base + cx * scale, base + cy * scale, radius * scale, {fill = "none"})
+	end
+end
+
+
+
+
+
+local line = function(x1, y1, x2, y2)
+	return function(aDrawing)
+		aDrawing:addLine(
+			base + x1 * scale, base + y1 * scale,
+			base + x2 * scale, base + y2 * scale
+		)
+	end
+end
+
+
+
+
+
+local arc = function (x1, y1, x2, y2, rx, ry, angle, isLarge, sweepFlag)
+	return function(aDrawing)
+		aDrawing:addArc(
+			base + x1 * scale, base + y1 * scale,
+			base + x2 * scale, base + y2 * scale,
+			rx * scale, ry * scale,
+			angle, isLarge, sweepFlag, {fill = "none"}
+		)
+	end
+end
+
+
+
+
+-- Useful constants:
+local sin30 = math.sin(30 * math.pi / 180)
+local cos30 = math.cos(30 * math.pi / 180)
+
+
+
+
+
+--- The individual shapes
+-- An array of items, each item represents one drawing
+-- Each drawing is an array of shapes with symmetry (no symmetry = single instance)
+local shapeDefs =
+{
+	-- Two co-axial circles with lines in between, 6x symmetry
+	{
+		{
+			circle(0.5, 0.5, 0.2),
+			circle(0.5, 0.5, 0.5),
+		},
+		{
+			symmetry = 6,
+			line(0.5, 0, 0.5, 0.3),
+		},
+	},
+
+	-- Two co-axial circles with arcs in between, 6x symmetry
+	{
+		{
+			circle(0.5, 0.5, 0.5),
+			circle(0.5, 0.5, 0.25),
+		},
+		{
+			symmetry = 6,
+			arc(0.5, 0, 0.5, 0.25, 0.125, 0.15, 0, false, true),
+		},
+	},
+
+	-- Two co-axial hexagons with lines connecting their points
+	{
+		{
+			symmetry = 6,
+			line(0.5, 0,    0.5 + cos30 / 2, sin30 / 2),
+			line(0.5, 0.25, 0.5 + cos30 / 4, 0.25 + sin30 / 4),
+			line(0.5, 0,    0.5,             0.25),
+		}
+	},
+
+	-- Two co-axial circles with lines in between, 4x symmetry
+	{
+		{
+			circle(0.5, 0.5, 0.2),
+			circle(0.5, 0.5, 0.5),
+		},
+		{
+			symmetry = 4,
+			line(0.5, 0, 0.5, 0.3),
+		},
+	},
+
+	-- Two co-axial circles with lines in between, 5x symmetry
+	{
+		{
+			circle(0.5, 0.5, 0.2),
+			circle(0.5, 0.5, 0.5),
+		},
+		{
+			symmetry = 5,
+			line(0.5, 0, 0.5, 0.3),
+		},
+	},
+
+	-- Two co-axial circles with arcs in between, 4x symmetry
+	{
+		{
+			circle(0.5, 0.5, 0.5),
+			circle(0.5, 0.5, 0.25),
+		},
+		{
+			symmetry = 4,
+			arc(0.5, 0, 0.5, 0.25, 0.125, 0.15, 0, false, true),
+		},
+	},
+
+	-- Two co-axial circles with arcs in between, 5x symmetry
+	{
+		{
+			circle(0.5, 0.5, 0.5),
+			circle(0.5, 0.5, 0.25),
+		},
+		{
+			symmetry = 5,
+			arc(0.5, 0, 0.5, 0.25, 0.125, 0.15, 0, false, true),
+		},
+	},
+
+	-- Two co-axial circles with lines in between, 3x symmetry
+	{
+		{
+			circle(0.5, 0.5, 0.2),
+			circle(0.5, 0.5, 0.5),
+		},
+		{
+			symmetry = 3,
+			line(0.5, 0, 0.5, 0.3),
+		},
+	},
+
+}
+
+
+
+
+
+for idx, shapeDef in ipairs(shapeDefs) do
+	local drawing = svg.new(2 * base + scale, 2 * base + scale)
+	drawing:beginGroup("main", { stroke = "#000", ["stroke-width"] = 10 * scale / 1000})
+		for sgIdx, sg in ipairs(shapeDef) do
+			local grpName = "grp" .. sgIdx
+			drawing:beginGroup(grpName)
+				for _, shape in ipairs(sg) do
+					shape(drawing)
+				end
+			drawing:endGroup()
+			local center = string.format("%s, %s", base + scale / 2, base + scale / 2)
+			for rot = 2, (sg.symmetry or 1) do
+				local angle = (rot - 1) * 360 / (sg.symmetry or 1)
+				drawing:useGroup(grpName, "rotate(" .. angle .. ",  " .. center .. ")")
+			end  -- for rot
+		end  -- for sg
+	drawing:endGroup()
+	drawing:writeToFile(string.format("shape%02d.svg", idx))
+end

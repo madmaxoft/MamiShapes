@@ -1,0 +1,1 @@
+for %%i in (*.svg) do "c:\Program Files\Inkscape\inkscape.exe" -z -e %%i.png -w 2000 -h 2000 %%i
