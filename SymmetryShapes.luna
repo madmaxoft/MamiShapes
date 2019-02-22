@@ -1,6 +1,6 @@
--- Hexagons.lua
+-- SymmetryShapes.luna
 
--- Generates SVG files of the hexagonal shapes
+-- Generates SVG files of the shapes that are rotationally symmetrical
 
 
 

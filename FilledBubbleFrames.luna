@@ -1,0 +1,103 @@
+-- FilledBubbleFrames.luna
+
+-- Generates SVG files for frames of filled "bubbles" (half-circles)
+
+
+
+
+-- Radius of the single bubble, in pixels
+local scale = 50
+
+
+
+
+
+-- Generates the path of the rectangular frame of the specified width and height (measured in count of bubbles)
+local function generateRectangleFrame(aWid, aHei)
+	local res = {}
+	local n = 1
+	local function add(txt)
+		res[n] = txt
+		n = n + 1
+	end
+	local fmt = string.format
+
+	add(fmt("<path d=\"M %f %f L %f %f L %f %f L %f %f ",
+		scale, scale,
+		scale, (aHei + 2) * scale,
+		(aWid + 2) * scale, (aHei + 2) * scale,
+		(aWid + 2) * scale, scale
+	))
+
+	-- Top edge:
+	add(fmt("M %f %f A %f %f 0 1 1 %f %f",
+		scale, scale * 1.5,
+		scale / 2, scale / 2,
+		scale * 1.5, scale
+	))
+	for w = 1, aWid do
+		add(fmt("A %f %f 0 1 1 %f %f",
+			scale / 2, scale / 2,
+			(w + 1.5) * scale, scale
+		))
+	end
+
+	-- Right edge:
+	local right = (aWid + 2) * scale
+	add(fmt("A %f %f 0 1 1 %f %f",
+		scale / 2, scale / 2,
+		right, scale * 1.5
+	))
+	for h = 1, aHei do
+		add(fmt("A %f %f 0 1 1 %f %f",
+			scale / 2, scale / 2,
+			right, (h + 1.5) * scale
+		))
+	end
+
+	-- Bottom edge:
+	local bottom = (aHei + 2) * scale
+	add(fmt("A %f %f 0 1 1 %f %f",
+		scale / 2, scale / 2,
+		(aWid + 1.5) * scale, bottom
+	))
+	for w = 1, aWid do
+		add(fmt("A %f %f 0 1 1 %f %f",
+			scale / 2, scale / 2,
+			(aWid - w + 1.5) * scale, bottom
+		))
+	end
+
+	-- Left edge:
+	add(fmt("A %f %f 0 1 1 %f %f",
+		scale / 2, scale / 2,
+		scale, (aHei + 1.5) * scale
+	))
+	for h = 1, aHei do
+		add(fmt("A %f %f 0 1 1 %f %f",
+			scale / 2, scale / 2,
+			scale, (aHei - h + 1.5) * scale
+		))
+	end
+
+	add("\" fill=\"black\"/>")
+	return table.concat(res)
+end
+
+
+
+
+
+-- Main generating loop
+for wid = 5, 10 do
+	for hei = 4, 8 do
+		local f = assert(io.open(string.format("bubblerect-%02d-%02d.svg", wid, hei), "w"))
+		f:write([[<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="]])
+		f:write((wid + 3) * scale)
+		f:write([[" height="]])
+		f:write((hei + 3) * scale)
+		f:write([[">\n]])
+		f:write(generateRectangleFrame(wid, hei))
+		f:write("\n</svg>")
+	end
+end
