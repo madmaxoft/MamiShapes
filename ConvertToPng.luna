@@ -1,0 +1,132 @@
+--[[ Converts all SVG files in current folder to PNG using Inkscape.
+Detects if there's already an existing PNG file not-older than source and skips such.
+--]]
+
+
+
+
+
+local lfs = require("lfs")
+
+
+
+
+
+local function saveConfig(aConfig)
+	local writeTable
+	writeTable = function(aFile, aTable, aIndent)
+		for k, v in pairs(aTable) do
+			aFile:write(aIndent)
+			aFile:write(k)
+			aFile:write(" = ")
+			local t = type(v)
+			if (t == "table") then
+				aFile:write(aIndent, "{\n")
+				writeTable(aFile, v, aIndent .. "\t")
+				aFile:write(aIndent, "},\n")
+			elseif (t == "string") then
+				aFile:write(string.format("%q,\n", v))
+			else
+				aFile:write(v)
+				aFile:write(",\n")
+			end
+		end
+	end
+
+	local f = io.open("config-inkscape.lua", "w")
+	f:write("return\n{\n")
+	writeTable(f, aConfig, "\t")
+	f:write("}\n")
+	f:close()
+	print("Config saved")
+end
+
+
+
+
+
+-- Locate Inkscape: First try previously-saved config, then default, if that doesn't help, ask the user:
+local isOK, config = pcall(dofile, "config-inkscape.lua")
+if not(isOK) then
+	config = {}
+end
+if not(config.inkscapeExe) then
+	config.inkscapeExe = "c:\\program files\\inkscape\\inkscape.exe"
+end
+config.maxConcurrent = config.maxConcurrent or 16
+
+local attrMode, err = lfs.attributes(config.inkscapeExe, "mode")
+if not(attrMode) then
+	print("Inkscape not found at " .. config.inkscapeExe)
+	if not(lunapaak) then
+		print("Please add the inkscapeExe value to config-inkscape.lua")
+	end
+	print("Please tell me where Inkscape is...")
+	config.inkscapeExe = lunapaak.ui.getopenfilename({title = "Where is Inkscape?", filter = "inkscape.exe", filename = "inkscape.exe", initialdir = "c:\\program files"})
+	if not(config.inkscapeExe) then
+		return
+	end
+end
+
+
+
+
+
+-- Collect the files to process:
+local filenames = {}
+for fnam in lfs.dir(".") do
+	if (fnam:match("%.svg$")) then
+		table.insert(filenames, fnam)
+	end
+end
+local toProcess = {}
+for _, fnam in ipairs(filenames) do
+	local dstFile = fnam:gsub("%.svg$", ".png")
+	assert(fnam ~= dstFile)
+	local attrMode = lfs.attributes(dstFile, "mode")
+	local shouldAdd = true
+	if (attrMode == "file") then
+		local lastModSrc = lfs.attributes(fnam, "modification")
+		local lastModDst = lfs.attributes(dstFile, "modification")
+		if (lastModSrc < lastModDst) then
+			shouldAdd = false
+		end
+	end
+	if (shouldAdd) then
+		table.insert(toProcess, {src = fnam, dst = dstFile})
+	end
+end
+
+
+
+
+
+-- Process the files:
+print("Processing " .. #toProcess .. " files...")
+local processes = {}
+local idx = 1
+for _, pair in ipairs(toProcess) do
+	if (processes[idx]) then
+		processes[idx]:close()
+		processes[idx] = nil
+	end
+	local cmdLine = "\"" .. config.inkscapeExe .. "\" -z -e " .. pair.dst .. " -h 2000 " .. pair.src
+	processes[idx] = io.popen(cmdLine, "r")
+	idx = idx + 1
+	if (idx > config.maxConcurrent) then
+		idx = 1
+	end
+end
+
+-- Wait for the processes to finish:
+print("Waiting for Inkscape to finish rendering...")
+for _, process in ipairs(processes) do
+	if (process) then
+		process:close()
+	end
+end
+
+
+
+saveConfig(config)
+print("All done.")

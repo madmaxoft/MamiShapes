@@ -2,3 +2,6 @@
 *.svg
 *.png
 *.zip
+
+# Config files:
+config-*.lua
