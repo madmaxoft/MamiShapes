@@ -111,6 +111,7 @@ for _, pair in ipairs(toProcess) do
 		processes[idx] = nil
 	end
 	local cmdLine = "\"" .. config.inkscapeExe .. "\" -z -e " .. pair.dst .. " -h 2000 " .. pair.src
+	print("Processing " .. pair.src)
 	processes[idx] = io.popen(cmdLine, "r")
 	idx = idx + 1
 	if (idx > config.maxConcurrent) then
