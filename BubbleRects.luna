@@ -1,12 +1,18 @@
--- FilledBubbleFrames.luna
+-- BubbleRects.luna
 
--- Generates SVG files for frames of filled "bubbles" (half-circles)
+-- Generates SVG files for rectangles of filled "bubbles" (half-circles)
 
 
 
 
 -- Radius of the single bubble, in pixels
 local scale = 50
+
+--- Specific sizes to generate, in addition to the regular (5 - 10) x (4 - 8)
+local explicitSizes =
+{
+	{ 25, 10},
+}
 
 
 
@@ -88,17 +94,29 @@ end
 
 
 
+--- Writes a single rectangle's SVG code into a file, based on the dimensions given
+local function writeRect(aWid, aHei)
+	local f = assert(io.open(string.format("bubblerect-%02d-%02d.svg", aWid, aHei), "w"))
+	f:write([[<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="]])
+	f:write((aWid + 3) * scale)
+	f:write([[" height="]])
+	f:write((aHei + 3) * scale)
+	f:write([[">\n]])
+	f:write(generateRectangleFrame(aWid, aHei))
+	f:write("\n</svg>")
+	f:close()
+end
+
+
+
+
+
 -- Main generating loop
+for _, size in ipairs(explicitSizes) do
+	writeRect(size[1], size[2])
+end
 for wid = 5, 10 do
 	for hei = 4, 8 do
-		local f = assert(io.open(string.format("bubblerect-%02d-%02d.svg", wid, hei), "w"))
-		f:write([[<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="]])
-		f:write((wid + 3) * scale)
-		f:write([[" height="]])
-		f:write((hei + 3) * scale)
-		f:write([[">\n]])
-		f:write(generateRectangleFrame(wid, hei))
-		f:write("\n</svg>")
-		f:close()
+		writeRect(wid, hei)
 	end
 end
