@@ -95,5 +95,6 @@ for wid = 5, 10 do
 		f:write([[">\n]])
 		f:write(generateRectangleFrame(wid, hei))
 		f:write("\n</svg>")
+		f:close()
 	end
 end
