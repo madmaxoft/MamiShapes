@@ -1,0 +1,131 @@
+-- CloudEllipses.luna
+
+-- Generates SVG files for ellipses of "clouds" (half-circles)
+
+
+
+
+
+--- Size of a single "cloud" (diameter), in pixels:
+local scale = 50
+
+--- Width of the lines, in pixels:
+local strokeWidth = 5
+
+--- Specific sizes to generate, in addition to the regular (5 - 10) x (4 - 8)
+local explicitSizes =
+{
+	{ 25, 10},
+}
+
+
+
+
+
+--- Returns an array of points {x, y} evenly spaced on the circumference of an ellipse, at most aMaxDistance apart from each other
+local function ellipsePoints(aRadiusX, aRadiusY, aMaxDistance)
+	-- Approximate the ellipse's circumference:
+	local circ = 0
+	local prevx = 0
+	local prevy = aRadiusY
+	for t = 0, 2 * math.pi, 0.0001 do
+		local x = (aRadiusX * math.sin(t))
+		local y = (aRadiusY * math.cos(t))
+		circ = circ + math.sqrt((x - prevx) * (x - prevx) + (y - prevy) * (y - prevy))
+		prevx = x
+		prevy = y
+	end
+
+	-- Space the points on the circumference, by summing the partial arc lengths:
+	local numPoints = math.ceil(circ / aMaxDistance)
+	local dist = circ / numPoints
+	prevx = 0
+	prevy = aRadiusY
+	circ = 0
+	local res = {{prevx, prevy}}
+	for t = 0, 2 * math.pi, 0.0001 do
+		local x = (aRadiusX * math.sin(t))
+		local y = (aRadiusY * math.cos(t))
+		circ = circ + math.sqrt((x - prevx) * (x - prevx) + (y - prevy) * (y - prevy))
+		prevx = x
+		prevy = y
+		if (circ > dist) then
+			table.insert(res, {x, y})
+			circ = circ - dist
+		end
+	end
+	return res
+end
+
+
+
+
+
+-- Generates the path of the ellipse of the specified width and height (measured in count of bubbles)
+local function generateCloudEllipse(aWid, aHei)
+	local res = {}
+	local n = 1
+	local function add(txt)
+		res[n] = txt
+		n = n + 1
+	end
+	local fmt = string.format
+	local points = ellipsePoints(aWid * scale / 2, aHei * scale / 2, scale)
+	for _, pt in ipairs(points) do
+		pt[1] = pt[1] + (aWid / 2 + 1) * scale
+		pt[2] = pt[2] + (aHei / 2 + 1) * scale
+	end
+
+	add(fmt("<path d=\"M %f %f",
+		points[1][1], points[1][2]
+	))
+	for _, pt in ipairs(points) do
+		add(fmt("A %f %f 0 0 0 %f %f ",
+			scale / 2, scale / 2,
+			pt[1], pt[2]
+		))
+	end
+	add(fmt("A %f %f 0 0 0 %f %f ",
+		scale / 2, scale / 2,
+		points[1][1], points[1][2]
+	))
+	-- Add the second point again, so that the joint is drawn completely:
+	add(fmt("A %f %f 0 0 0 %f %f ",
+		scale / 2, scale / 2,
+		points[2][1], points[2][2]
+	))
+
+	add("\" fill=\"none\" stroke=\"black\" stroke-width=\"" .. strokeWidth .. "\"/>")
+	return table.concat(res)
+end
+
+
+
+
+
+--- Writes a single ellipse's SVG code to a file, based on the dimensions given
+local function writeEllipse(aWid, aHei)
+	local f = assert(io.open(string.format("cloudellipse-%02d-%02d.svg", aWid, aHei), "w"))
+	f:write([[<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="]])
+	f:write((aWid + 2) * scale)
+	f:write([[" height="]])
+	f:write((aHei + 2) * scale)
+	f:write([[">]])
+	f:write(generateCloudEllipse(aWid, aHei))
+	f:write("\n</svg>")
+	f:close()
+end
+
+
+
+
+
+-- Main generating loop:
+for _, size in ipairs(explicitSizes) do
+	writeEllipse(size[1], size[2])
+end
+for wid = 5, 10 do
+	for hei = 4, 8 do
+		writeEllipse(wid, hei)
+	end
+end
