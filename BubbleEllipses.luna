@@ -110,6 +110,7 @@ end
 
 --- Writes a single ellipse's SVG code to a file, based on the dimensions given
 local function writeEllipse(aWid, aHei)
+	print("Processing size " .. aWid .. " x " .. aHei .. "...")
 	local f = assert(io.open(string.format("bubbleellipse-%02d-%02d.svg", aWid, aHei), "w"))
 	f:write([[<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="]])
 	f:write((aWid + 2) * scale)
