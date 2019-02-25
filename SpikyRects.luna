@@ -1,0 +1,127 @@
+-- Generates SVG files for rectangles of "spikes" (inverted half-circles
+
+
+
+
+
+--- Size of a single "spike", in pixels:
+local scale = 50
+
+--- Width of the lines, in pixels:
+local strokeWidth = 5
+
+--- Sharpness of a spike, must be between 0.5 and 1; the bigger the number, the softer the spike:
+local spikeSoftness = 0.58
+
+--- Specific sizes to generate, in addition to the regular (5 - 10) x (4 - 8)
+local explicitSizes =
+{
+	{ 25, 10},
+}
+
+
+
+
+
+-- Generates the path of the rectangular frame of the specified width and height (measured in count of spikes)
+local function generateRectangleFrame(aWid, aHei)
+	local res = {}
+	local n = 1
+	local function add(txt)
+		res[n] = txt
+		n = n + 1
+	end
+	local fmt = string.format
+
+	-- Top edge:
+	local radius = scale * spikeSoftness
+	local left  = 0.5  * scale
+	local left2 = 1    * scale
+	local top   = 0.5  * scale
+	local top2  = 1    * scale
+	add(fmt("<path d=\"M %s %s A %s %s 0 0 0 %s %s ",
+		left,  top2,
+		radius, radius,
+		left2, top
+	))
+	for w = 1, aWid do
+		add(fmt("A %s %s 0 0 0 %s %s ",
+			radius, radius,
+			(w + 1)   * scale, top
+		))
+	end
+
+	-- Right edge:
+	local right  = (aWid + 1.5) * scale
+	local right2 = (aWid + 1)   * scale
+	add(fmt("A %s %s 0 0 0 %s %s ",
+		radius, radius,
+		right, top2
+	))
+	for h = 1, aHei do
+		add(fmt("A %s %s 0 0 0 %s %s ",
+			radius, radius,
+			right,  (h + 1)   * scale
+		))
+	end
+
+	-- Bottom edge:
+	local bottom  = (aHei + 1.5) * scale
+	local bottom2 = (aHei + 1)   * scale
+	add(fmt("A %s %s 0 0 0 %s %s ",
+		radius, radius,
+		right2, bottom
+	))
+	for w = 1, aWid do
+		add(fmt("A %s %s 0 0 0 %s %s ",
+			radius, radius,
+			(aWid - w + 1)   * scale, bottom
+		))
+	end
+
+	-- Left edge:
+	add(fmt("A %s %s 0 0 0 %s %s ",
+		radius, radius,
+		left, bottom2
+	))
+	for h = 1, aHei do
+		add(fmt("A %s %s 0 0 0 %s %s ",
+			radius, radius,
+			left,  (aHei - h + 1)   * scale
+		))
+	end
+
+	add(" Z\" fill=\"none\" stroke=\"black\" stroke-width=\"" .. strokeWidth .. "\"/>")
+	return table.concat(res)
+end
+
+
+
+
+
+--- Writes a single rectangle's SVG code into a file, based on the dimensions given
+local function writeRect(aWid, aHei)
+	local f = assert(io.open(string.format("spikyrect-%02d-%02d.svg", aWid, aHei), "w"))
+	f:write([[<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="]])
+	f:write((aWid + 3) * scale)
+	f:write([[" height="]])
+	f:write((aHei + 3) * scale)
+	f:write([[">]])
+	f:write(generateRectangleFrame(aWid, aHei))
+	f:write("\n</svg>")
+	f:close()
+end
+
+
+
+
+
+-- Main generating loop
+for _, size in ipairs(explicitSizes) do
+	writeRect(size[1], size[2])
+end
+for wid = 5, 10 do
+	for hei = 4, 8 do
+		writeRect(wid, hei)
+	end
+end
