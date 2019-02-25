@@ -1,0 +1,134 @@
+-- Generates SVG files for rectangles of "squarewaves"
+
+
+
+
+
+--- Size of a single "squarewave", in pixels:
+local scale = 50
+
+--- Width of the lines, in pixels:
+local strokeWidth = 5
+
+--- Specific sizes to generate, in addition to the regular (5 - 10) x (4 - 8)
+local explicitSizes =
+{
+	{ 25, 10},
+}
+
+
+
+
+
+-- Generates the path of the rectangular frame of the specified width and height (measured in count of teeth)
+local function generateRectangleFrame(aWid, aHei)
+	local res = {}
+	local n = 1
+	local function add(txt)
+		res[n] = txt
+		n = n + 1
+	end
+	local fmt = string.format
+
+	-- Top edge:
+	local left  = 0.5  * scale
+	local left2 = 1    * scale
+	local top   = 0.5  * scale
+	local top2  = 1    * scale
+	local right  = (aWid + 1.5) * scale
+	local right2 = (aWid + 2)   * scale
+	local bottom  = (aHei + 1.5) * scale
+	local bottom2 = (aHei + 2)   * scale
+	add(fmt("<path d=\"M %s %s L %s %s L %s %s ",
+		left, top2,
+		left2, top2,
+		left2, top
+	))
+	for w = 1, aWid do
+		add(fmt("L %f %f L %f %f L %f %f L %f %f ",
+			(w + 0.5) * scale, top,
+			(w + 0.5) * scale, top2,
+			(w + 1)   * scale, top2,
+			(w + 1)   * scale, top
+		))
+	end
+
+	-- Right edge:
+	add(fmt("L %f %f L %f %f L %f %f ",
+		right, top,
+		right, top2,
+		right2, top2
+	))
+	for h = 1, aHei do
+		add(fmt("L %f %f L %f %f L %f %f L %f %f ",
+			right2, (h + 0.5) * scale,
+			right,  (h + 0.5) * scale,
+			right,  (h + 1)   * scale,
+			right2, (h + 1)   * scale
+		))
+	end
+
+	-- Bottom edge:
+	add(fmt("L %f %f L %f %f L %f %f ",
+		right2, bottom,
+		right,  bottom,
+		right,  bottom2
+	))
+	for w = 1, aWid do
+		add(fmt("L %f %f L %f %f L %f %f L %f %f ",
+			(aWid - w + 2)   * scale, bottom2,
+			(aWid - w + 2)   * scale, bottom,
+			(aWid - w + 1.5) * scale, bottom,
+			(aWid - w + 1.5) * scale, bottom2
+		))
+	end
+
+	-- Left edge:
+	add(fmt("L %s %s L %s %s L %s %s ",
+		left2, bottom2,
+		left2, bottom,
+		left,  bottom
+	))
+	for h = 1, aHei do
+		add(fmt("L %s %s L %s %s L %s %s L %s %s ",
+			left,  (aHei - h + 2)   * scale,
+			left2, (aHei - h + 2)   * scale,
+			left2, (aHei - h + 1.5) * scale,
+			left,  (aHei - h + 1.5) * scale
+		))
+	end
+
+	add(" Z\" fill=\"none\" stroke=\"black\" stroke-width=\"" .. strokeWidth .. "\"/>")
+	return table.concat(res)
+end
+
+
+
+
+
+--- Writes a single rectangle's SVG code into a file, based on the dimensions given
+local function writeRect(aWid, aHei)
+	local f = assert(io.open(string.format("squarewaverect-%02d-%02d.svg", aWid, aHei), "w"))
+	f:write([[<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="]])
+	f:write((aWid + 3) * scale)
+	f:write([[" height="]])
+	f:write((aHei + 3) * scale)
+	f:write([[">]])
+	f:write(generateRectangleFrame(aWid, aHei))
+	f:write("\n</svg>")
+	f:close()
+end
+
+
+
+
+
+-- Main generating loop
+for _, size in ipairs(explicitSizes) do
+	writeRect(size[1], size[2])
+end
+for wid = 5, 10 do
+	for hei = 4, 8 do
+		writeRect(wid, hei)
+	end
+end
