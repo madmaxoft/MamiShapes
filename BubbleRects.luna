@@ -36,13 +36,13 @@ local function generateRectangleFrame(aWid, aHei)
 	))
 
 	-- Top edge:
-	add(fmt("M %f %f A %f %f 0 1 1 %f %f",
+	add(fmt("M %f %f A %f %f 0 1 1 %f %f ",
 		scale, scale * 1.5,
 		scale / 2, scale / 2,
 		scale * 1.5, scale
 	))
 	for w = 1, aWid do
-		add(fmt("A %f %f 0 1 1 %f %f",
+		add(fmt("A %f %f 0 1 1 %f %f ",
 			scale / 2, scale / 2,
 			(w + 1.5) * scale, scale
 		))
@@ -50,12 +50,12 @@ local function generateRectangleFrame(aWid, aHei)
 
 	-- Right edge:
 	local right = (aWid + 2) * scale
-	add(fmt("A %f %f 0 1 1 %f %f",
+	add(fmt("A %f %f 0 1 1 %f %f ",
 		scale / 2, scale / 2,
 		right, scale * 1.5
 	))
 	for h = 1, aHei do
-		add(fmt("A %f %f 0 1 1 %f %f",
+		add(fmt("A %f %f 0 1 1 %f %f ",
 			scale / 2, scale / 2,
 			right, (h + 1.5) * scale
 		))
@@ -63,24 +63,24 @@ local function generateRectangleFrame(aWid, aHei)
 
 	-- Bottom edge:
 	local bottom = (aHei + 2) * scale
-	add(fmt("A %f %f 0 1 1 %f %f",
+	add(fmt("A %f %f 0 1 1 %f %f ",
 		scale / 2, scale / 2,
 		(aWid + 1.5) * scale, bottom
 	))
 	for w = 1, aWid do
-		add(fmt("A %f %f 0 1 1 %f %f",
+		add(fmt("A %f %f 0 1 1 %f %f ",
 			scale / 2, scale / 2,
 			(aWid - w + 1.5) * scale, bottom
 		))
 	end
 
 	-- Left edge:
-	add(fmt("A %f %f 0 1 1 %f %f",
+	add(fmt("A %f %f 0 1 1 %f %f ",
 		scale / 2, scale / 2,
 		scale, (aHei + 1.5) * scale
 	))
 	for h = 1, aHei do
-		add(fmt("A %f %f 0 1 1 %f %f",
+		add(fmt("A %f %f 0 1 1 %f %f ",
 			scale / 2, scale / 2,
 			scale, (aHei - h + 1.5) * scale
 		))
@@ -101,7 +101,7 @@ local function writeRect(aWid, aHei)
 	f:write((aWid + 3) * scale)
 	f:write([[" height="]])
 	f:write((aHei + 3) * scale)
-	f:write([[">\n]])
+	f:write([[">]])
 	f:write(generateRectangleFrame(aWid, aHei))
 	f:write("\n</svg>")
 	f:close()

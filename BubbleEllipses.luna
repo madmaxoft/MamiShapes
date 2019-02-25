@@ -76,7 +76,7 @@ local function generateCloudEllipse(aWid, aHei)
 		pt[2] = pt[2] + (aHei / 2 + 1) * scale
 	end
 
-	add(fmt("<path d=\"M %f %f A %f %f 0 1 1 %f %f A %f %f 0 0 1 %f %f M %f %f",
+	add(fmt("<path d=\"M %f %f A %f %f 0 1 1 %f %f A %f %f 0 0 1 %f %f M %f %f ",
 		(aWid / 2 + 1) * scale, (aHei + 1) * scale - strokeWidth,
 		aWid / 2, aHei / 2,
 		(aWid / 2 + 1) * scale, scale + strokeWidth,
