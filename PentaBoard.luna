@@ -1,0 +1,186 @@
+-- Generates a game-board using pentagons
+
+
+
+
+-- Configurable parameters:
+
+--- Pentagon size (radius of the outscribed circle), in pixels:
+local scale = 150
+
+--- Pentagon tile fullness (creates regular gaps between the pentagons), in percent:
+local tileFullness = 90
+
+--- The thickness of the pentagon lines, in pixels:
+local strokeWidth = 5
+
+
+
+
+
+--[[
+The pentagons have two orientations: point-up, or point-down. Each pair of neighbors must be of different
+orientation. Each orientation has a fixed edge numbering ("edge #1 is the one going from most upwards, then
+clockwise"). We represent the entire board as a walk from the initial pentagram through its edges, simply by
+the consecutive edge numbers:
+
+      ,'.
+    5'   `1
+  ,'       `.
+  \         /
+   4       2
+    \__3__/
+
+     --1--
+    /     \
+   5       2
+  /         \
+ `.         ,'
+   `4     3'
+     `. ,'
+       '
+--]]
+
+
+
+
+--- Edge numbers of the consecutive pentagrams defining the board
+local board = {
+	-- Top row:
+	2, 2, 2, 2, 2, 2, 2,
+
+	-- Go down a row:
+	3, 3, 4, 5,
+
+	-- Second row:
+	5, 4, 5, 4, 5, 4,
+
+	-- Go down a row:
+	4, 3, 3,
+
+	-- Third row:
+	1, 2, 2, 2, 2, 3, 2,
+
+	-- Fourth row, backwards:
+	4, 4, 5, 4, 5, 5, 5,
+
+	-- Third row, again:
+	1, 2, 2, 2, 2, 3, 2,
+
+	-- Finish:
+	2, 3,
+}
+
+
+
+
+
+--- Distance between two neighbors' centers
+local apothem2 = scale * math.cos(math.pi / 5) * 2
+
+--- Returns the translation {x, y} of length apothem2 along the direction of aAngle (in degrees)
+local function translation(aAngle)
+	local angle = aAngle / 180 * math.pi
+	return
+	{
+		apothem2 * math.cos(angle),
+		apothem2 * math.sin(-angle),
+	}
+end
+
+--- Translations applied to the pentagon center when going to its neighbor through the specific edge
+-- throughEdgeTranslations[orientation][edgenum] = {x, y}
+local throughEdgeTranslations =
+{
+	-- Point-up orientation:
+	{
+		translation(54),
+		translation(-18),
+		translation(-90),
+		translation(198),
+		translation(126),
+	},
+
+	-- Point-down orientation:
+	{
+		translation(90),
+		translation(18),
+		translation(-54),
+		translation(-126),
+		translation(-198)
+	}
+}
+
+
+
+
+
+--- Returns the 5 points of the pentagon, around {0, 0}, with outscribed circle of radius scale * tileFullness
+local function getPentaPoints()
+	local res = {}
+	for n = 1, 5 do
+		local angle = n * math.pi * 2 / 5 + math.pi / 2
+		res[n] =
+		{
+			scale * tileFullness / 100 * math.cos(angle),
+			scale * tileFullness / 100 * math.sin(-angle),
+		}
+	end
+	return res
+end
+
+
+
+
+
+local pentagramPoints = getPentaPoints()
+
+--- Adds a new pentagram to the drawing, with the specified center and rotation (0 or 1)
+local function addPentagram(aDrawing, aX, aY, aRotate)
+	local multiplier = 1 - aRotate * 2  -- Turn [0, 1] into [1, -1]
+	local pathdef = {}
+	for idx, pt in ipairs(pentagramPoints) do
+		pathdef[idx] = string.format("%s %s", aX + multiplier * pt[1], aY + multiplier * pt[2])
+	end
+	aDrawing:addManual(
+		"<path d=\"M " ..
+		table.concat(pathdef, " L ") ..
+		" Z\" fill=\"none\" stroke=\"#000\" stroke-width=\"" ..
+		strokeWidth ..
+		"\"/>"
+	)
+end
+
+
+
+
+
+local svg = require("SvgWriter")
+local drawing = svg:new(0, 0)
+local pt = getPentaPoints()
+local curX = scale * 2
+local curY = scale * 2
+local rotate = 0
+local maxX = scale
+local maxY = scale
+for _, edge in ipairs(board) do
+	addPentagram(drawing, curX, curY, rotate)
+	if (curX > maxX) then
+		maxX = curX
+	end
+	if (curY > maxY) then
+		maxY = curY
+	end
+	curX = curX + throughEdgeTranslations[rotate + 1][edge][1]
+	curY = curY + throughEdgeTranslations[rotate + 1][edge][2]
+	rotate = 1 - rotate
+end
+addPentagram(drawing, curX, curY, rotate)
+if (curX > maxX) then
+	maxX = curX
+end
+if (curY > maxY) then
+	maxY = curY
+end
+drawing:setDimensions(maxX + 2 * scale, maxY + 2 * scale)
+drawing:writeToFile("PentaBoard.svg")

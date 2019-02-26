@@ -36,6 +36,36 @@ end
 
 
 
+function SvgWriter:addArc(aX1, aY1, aX2, aY2, aRadiusX, aRadiusY, aAxisAngle, aIsLargeArc, aSweepFlag, aParams)
+	assert(type(self) == "table")
+	assert(type(aX1) == "number")
+	assert(type(aY1) == "number")
+	assert(type(aX2) == "number")
+	assert(type(aY2) == "number")
+	assert(type(aRadiusX) == "number")
+	assert(type(aRadiusY) == "number")
+	assert(type(aAxisAngle) == "number")
+	assert(type(aIsLargeArc) == "boolean")
+	assert(type(aSweepFlag) == "boolean")
+
+	local largeArcFlag = aIsLargeArc and "1" or "0"
+	local sweepFlag = aSweepFlag and "1" or "0"
+	local def = fmt("M %f %f A %f %f %f %s %s %f %f",
+		aX1, aY1,
+		aRadiusX, aRadiusY,
+		aAxisAngle,
+		largeArcFlag, sweepFlag,
+		aX2, aY2
+	)
+
+	self.out.n = self.out.n + 1
+	self.out[self.out.n] = fmt("<path d=\"%s\" %s/>", def, SvgWriter.serializeParams(aParams))
+end
+
+
+
+
+
 function SvgWriter:addCircle(aX, aY, aRadius, aParams)
 	assert(type(self) == "table")
 
@@ -74,30 +104,12 @@ end
 
 
 
-function SvgWriter:addArc(aX1, aY1, aX2, aY2, aRadiusX, aRadiusY, aAxisAngle, aIsLargeArc, aSweepFlag, aParams)
+function SvgWriter:addManual(aText)
 	assert(type(self) == "table")
-	assert(type(aX1) == "number")
-	assert(type(aY1) == "number")
-	assert(type(aX2) == "number")
-	assert(type(aY2) == "number")
-	assert(type(aRadiusX) == "number")
-	assert(type(aRadiusY) == "number")
-	assert(type(aAxisAngle) == "number")
-	assert(type(aIsLargeArc) == "boolean")
-	assert(type(aSweepFlag) == "boolean")
-
-	local largeArcFlag = aIsLargeArc and "1" or "0"
-	local sweepFlag = aSweepFlag and "1" or "0"
-	local def = fmt("M %f %f A %f %f %f %s %s %f %f",
-		aX1, aY1,
-		aRadiusX, aRadiusY,
-		aAxisAngle,
-		largeArcFlag, sweepFlag,
-		aX2, aY2
-	)
+	assert(type(aText) == "string")
 
 	self.out.n = self.out.n + 1
-	self.out[self.out.n] = fmt("<path d=\"%s\" %s/>", def, SvgWriter.serializeParams(aParams))
+	self.out[self.out.n] = aText
 end
 
 
@@ -129,6 +141,19 @@ function SvgWriter:endGroup()
 	self.out.n = self.out.n + 1
 	self.out[self.out.n] = fmt("</g>")
 	self.groupDepth = self.groupDepth - 1
+end
+
+
+
+
+
+function SvgWriter:setDimensions(aWidth, aHeight)
+	assert(type(self) == "table")
+	assert(tonumber(aWidth))
+	assert(tonumber(aHeight))
+
+	self.width = aWidth
+	self.height = aHeight
 end
 
 
