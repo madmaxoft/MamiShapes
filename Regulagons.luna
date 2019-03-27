@@ -1,0 +1,50 @@
+-- Generates SVG files for regular polygons (n = 3 .. 30)
+
+
+
+-- Configurable parameters:
+
+--- Polygon size (radius of the outscribed circle), in pixels:
+local size = 2000
+
+--- The thickness of the polygon lines, in pixels:
+local strokeWidth = 5
+
+
+
+
+
+local svg = require("SvgWriter")
+
+
+
+
+
+local function createPolygon(aNumSides)
+	assert(type(aNumSides) == "number")
+
+	local drawing = svg.new(size + 4 * strokeWidth, size + 4 * strokeWidth)
+	local halfSize = size / 2
+	local midx = halfSize + 2 * strokeWidth
+	local midy = midx
+	local sin, cos = math.sin, math.cos
+	drawing:beginGroup("main", { stroke = "#000", ["stroke-width"] = strokeWidth})
+		for s = 0, aNumSides do
+			local angle1 = s * math.pi * 2 / aNumSides
+			local angle2 = (s + 1) * math.pi * 2 / aNumSides
+			local x1, y1 = midx - sin(angle1) * halfSize, midy + cos(angle1) * halfSize
+			local x2, y2 = midx - sin(angle2) * halfSize, midy + cos(angle2) * halfSize
+			drawing:addLine(midx, midy, x1, y1)
+			drawing:addLine(x1, y1, x2, y2)
+		end
+	drawing:endGroup()
+	drawing:writeToFile(string.format("regulagon%02d.svg", aNumSides))
+end
+
+
+
+
+
+for i = 3, 30 do
+	createPolygon(i)
+end
