@@ -11,7 +11,10 @@ local svg = require("SvgWriter")
 
 
 
+--- The amount of empty space (margin) around the shape [pixels]
 local base = 10
+
+--- The size of the actual shape [pixels]
 local scale = 1000
 
 
@@ -68,6 +71,7 @@ local cos30 = math.cos(30 * math.pi / 180)
 -- Each drawing is an array of shapes with symmetry (no symmetry = single instance)
 local shapeDefs =
 {
+	-- Shape01.svg
 	-- Two co-axial circles with lines in between, 6x symmetry
 	{
 		{
@@ -80,6 +84,7 @@ local shapeDefs =
 		},
 	},
 
+	-- Shape02.svg
 	-- Two co-axial circles with arcs in between, 6x symmetry
 	{
 		{
@@ -92,6 +97,7 @@ local shapeDefs =
 		},
 	},
 
+	-- Shape03.svg
 	-- Two co-axial hexagons with lines connecting their points
 	{
 		{
@@ -102,6 +108,7 @@ local shapeDefs =
 		}
 	},
 
+	-- Shape04.svg
 	-- Two co-axial circles with lines in between, 4x symmetry
 	{
 		{
@@ -114,6 +121,7 @@ local shapeDefs =
 		},
 	},
 
+	-- Shape05.svg
 	-- Two co-axial circles with lines in between, 5x symmetry
 	{
 		{
@@ -126,6 +134,7 @@ local shapeDefs =
 		},
 	},
 
+	-- Shape06.svg
 	-- Two co-axial circles with arcs in between, 4x symmetry
 	{
 		{
@@ -138,6 +147,7 @@ local shapeDefs =
 		},
 	},
 
+	-- Shape07.svg
 	-- Two co-axial circles with arcs in between, 5x symmetry
 	{
 		{
@@ -150,6 +160,7 @@ local shapeDefs =
 		},
 	},
 
+	-- Shape08.svg
 	-- Two co-axial circles with lines in between, 3x symmetry
 	{
 		{
@@ -162,6 +173,31 @@ local shapeDefs =
 		},
 	},
 
+	-- Shape09.svg
+	-- Two co-axial circles with lines in between, 6x symmetry; smaller center
+	{
+		{
+			circle(0.5, 0.5, 0.1),
+			circle(0.5, 0.5, 0.5),
+		},
+		{
+			symmetry = 6,
+			line(0.5, 0, 0.5, 0.4),
+		},
+	},
+
+	-- Shape10.svg
+	-- Two co-axial circles with lines in between, 6x symmetry; larger center
+	{
+		{
+			circle(0.5, 0.5, 0.3),
+			circle(0.5, 0.5, 0.5),
+		},
+		{
+			symmetry = 6,
+			line(0.5, 0, 0.5, 0.2),
+		},
+	},
 }
 
 
@@ -185,5 +221,5 @@ for idx, shapeDef in ipairs(shapeDefs) do
 			end  -- for rot
 		end  -- for sg
 	drawing:endGroup()
-	drawing:writeToFile(string.format("shape%02d.svg", idx))
+	drawing:writeToFile(string.format("Shape%02d.svg", idx))
 end
