@@ -77,6 +77,31 @@ end
 
 
 
+function SvgWriter:addCurve(aXStart, aYStart, aXControl1, aYControl1, aXControl2, aYControl2, aXEnd, aYEnd, aParams)
+	assert(type(self) == "table")
+	assert(type(aXStart) == "number")
+	assert(type(aYStart) == "number")
+	assert(type(aXControl1) == "number")
+	assert(type(aYControl1) == "number")
+	assert(type(aXControl2) == "number")
+	assert(type(aYControl2) == "number")
+	assert(type(aXEnd) == "number")
+	assert(type(aYEnd) == "number")
+
+	local def = fmt("M %f %f C %f %f %f %f %f %f",
+		aXStart, aYStart,
+		aXControl1, aYControl1,
+		aXControl2, aYControl2,
+		aXEnd, aYEnd
+	)
+	self.out.n = self.out.n + 1
+	self.out[self.out.n] = fmt("<path d=\"%s\" %s/>",def, SvgWriter.serializeParams(aParams))
+end
+
+
+
+
+
 function SvgWriter:addEllipse(aX, aY, aRadiusX, aRadiusY, aParams)
 	assert(type(self) == "table")
 

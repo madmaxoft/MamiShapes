@@ -1,0 +1,100 @@
+-- Generates flowers with different number of petals
+
+
+
+
+--- Flower size, in pixels:
+-- (Note that the actual size will be a bit smaller than this due to approximations used)
+local size = 2000
+
+--- The thickness of the flower lines, in pixels:
+local strokeWidth = 12
+
+--- Size of the central circle, in fraction of the overall size:
+local centerSize = 0.2
+
+--- The min and max number of petals
+local minPetals = 5
+local maxPetals = 12
+
+
+
+
+
+package.path = "./?.lua" .. package.path  -- Prefer loading modules from current dir
+local svg = require("SvgWriter")
+
+
+
+
+
+--- Returns the size coefficient dependent on number of petals,
+-- to make the flowers of different petal count the same size
+local function petalSizeFromNumPetals(aNumPetals)
+	-- This is a good-enough approximation for 5 - 12 petals.
+	-- More petals are ok, fewer are a problem - too small.
+	return (2 / aNumPetals + 1.122)
+end
+
+
+
+
+
+--- Outputs a single flower into a file
+local function createFlower(aNumPetals)
+	local drawing = svg.new(size + 2 * strokeWidth, size + 2 * strokeWidth)
+	local halfSize = size / 2
+	local midx = halfSize + strokeWidth
+	local midy = midx
+	local sin, cos = math.sin, math.cos
+	drawing:beginGroup("main", { stroke = "#000", style = "fill: none", ["stroke-width"] = strokeWidth})
+		local petalSize = halfSize * petalSizeFromNumPetals(aNumPetals)
+		for s = 0, aNumPetals do
+			local angle1 = s * math.pi * 2 / aNumPetals
+			local angle2 = (s + 1) * math.pi * 2 / aNumPetals
+			local xs, ys = midx - sin(angle1) * halfSize * centerSize, midy + cos(angle1) * halfSize * centerSize
+			local x1, y1 = midx - sin(angle1) * petalSize, midy + cos(angle1) * petalSize
+			local x2, y2 = midx - sin(angle2) * petalSize, midy + cos(angle2) * petalSize
+			local xe, ye = midx - sin(angle2) * halfSize * centerSize, midy + cos(angle2) * halfSize * centerSize
+			drawing:addCurve(xs, ys, x1, y1, x2, y2, xe, ye)
+		end
+		drawing:addCircle(midx, midy, halfSize * centerSize)
+	drawing:endGroup()
+	drawing:writeToFile(string.format("flower%02d.svg", aNumPetals))
+end
+
+
+
+
+
+for i = minPetals, maxPetals do
+	createFlower(i)
+end
+
+
+
+
+--[[ Test: show all petal sizes in a single drawing:
+local drawing = svg.new(size + 2 * strokeWidth, size + 2 * strokeWidth)
+local halfSize = size / 2
+local midx = halfSize + strokeWidth
+local midy = midx
+local sin, cos = math.sin, math.cos
+drawing:beginGroup("main", { stroke = "#000", fill = "transparent", ["stroke-width"] = strokeWidth})
+	drawing:addCircle(midx, midy, halfSize * centerSize)
+	drawing:addCircle(midx, midy, halfSize)
+	for aNumPetals = 5, 12 do
+		local petalSize = halfSize * petalSizeFromNumPetals(aNumPetals)
+		for s = 0, aNumPetals do
+			local angle1 = s * math.pi * 2 / aNumPetals
+			local angle2 = (s + 1) * math.pi * 2 / aNumPetals
+			local xs, ys = midx - sin(angle1) * halfSize * centerSize, midy + cos(angle1) * halfSize * centerSize
+			local x1, y1 = midx - sin(angle1) * petalSize, midy + cos(angle1) * petalSize
+			local x2, y2 = midx - sin(angle2) * petalSize, midy + cos(angle2) * petalSize
+			local xe, ye = midx - sin(angle2) * halfSize * centerSize, midy + cos(angle2) * halfSize * centerSize
+			drawing:addCurve(xs, ys, x1, y1, x2, y2, xe, ye)
+		end
+	end
+drawing:endGroup()
+drawing:writeToFile("flower.svg")
+---]]
