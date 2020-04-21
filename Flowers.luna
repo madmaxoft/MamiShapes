@@ -7,11 +7,15 @@
 -- (Note that the actual size will be a bit smaller than this due to approximations used)
 local size = 2000
 
+--- Number of pixels added on all 4 sides of the image
+-- Needed when the centerSize is too large
+local extraEdge = 100
+
 --- The thickness of the flower lines, in pixels:
 local strokeWidth = 12
 
 --- Size of the central circle, in fraction of the overall size:
-local centerSize = 0.2
+local centerSize = 0.5
 
 --- The min and max number of petals
 local minPetals = 5
@@ -21,7 +25,7 @@ local maxPetals = 12
 
 
 
-package.path = "./?.lua" .. package.path  -- Prefer loading modules from current dir
+package.path = "./?.lua;" .. package.path  -- Prefer loading modules from current dir
 local svg = require("SvgWriter")
 
 
@@ -42,9 +46,9 @@ end
 
 --- Outputs a single flower into a file
 local function createFlower(aNumPetals)
-	local drawing = svg.new(size + 2 * strokeWidth, size + 2 * strokeWidth)
+	local drawing = svg.new(size + 2 * strokeWidth + 2 * extraEdge, size + 2 * strokeWidth + 2 * extraEdge)
 	local halfSize = size / 2
-	local midx = halfSize + strokeWidth
+	local midx = halfSize + strokeWidth + extraEdge
 	local midy = midx
 	local sin, cos = math.sin, math.cos
 	drawing:beginGroup("main", { stroke = "#000", style = "fill: none", ["stroke-width"] = strokeWidth})
