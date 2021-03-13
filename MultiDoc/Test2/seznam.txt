@@ -1,0 +1,3 @@
+CisloFaktury;VariabilniSymbol;Odberatel1;Odberatel2;Odberatel3;OdberatelIC;KonecnyPrijemce
+W123456789;123456987;ZŠ Vzdělaná;U Školy 1;19300 Praha;321654987;Mgr. Eva Dufková
+W987654321;321654789;Mgr. Iva Holá;U Spojů 5;12300 Neznámokde;;

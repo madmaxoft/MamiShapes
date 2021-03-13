@@ -1,0 +1,308 @@
+-- MultiDoc.luna
+
+--[[ Takes as input a .docx file as a template, and a .csv file as data source, and creates as many output
+.docx files as there are lines in the data source, each file being equivalent to the template, but with
+placeholders replaced with values from the data source.
+
+The placeholders are strings "${column-1}", "${column-2}" etc.; each gets replaced by the value
+from the corresponding .csv column. The first .csv column is also used as the base file name for the output
+file. The column indices are 1-based.
+
+For example, if the template contains text "Hello ${column-2} in file ${column-1}" and the data source has
+a line "fileA;world", there will be an output file "fileA.docX" containing the text "Hello world in file
+fileA".
+
+The syntax to invoke this program is "MultiDoc.luna Template[.docx] DataSource[.csv] [NumSkipRows]",
+the outputs are created in the current working folder. The docx and csv extensions are optional.
+NumSkipRows specifies the number of rows to skip from the start of the data source (header rows; default 0).
+
+This program needs 7zip to be installed an in path, so that it can be called by invoking "7z".
+--]]
+
+
+
+
+
+
+local lfs = require("lfs")
+
+--- Subfolder where the template is extracted to:
+local gTemplateFolder = "MultiDoc_tmpl"
+
+--- Subfolder where the current file is being constructed:
+local gWorkFolder = "MultiDoc_work"
+
+--- The name of the file within the docx template that needs to be processed:
+local gTemplatedFileName = "/word/document.xml"
+
+--- The index of the column in the data source where the file name is stored:
+local gFileNameColumnIdx = 1
+
+
+
+
+
+--- Runs 7zip with the specified commandline params
+-- Returns the response text received from 7z
+-- On error, returns nil and error message
+-- Note that if 7z is not present on the system, this may still return response (the OS saying "file not found" for example)
+local function run7Z(aParams)
+	assert(type(aParams) == "string")
+
+	local z, err = io.popen("7z " .. aParams .. " 2>&1", "r")
+	if not(z) then
+		return nil, err
+	end
+	local res = z:read("*a")
+	if not(res) then
+		return nil, "No data received from command"
+	end
+	z:close()
+	if (res:match("$ERROR: ")) then
+		return nil, "Error reported by 7zip:\n" .. res
+	end
+	return res
+end
+
+
+
+
+
+--- Returns the contents of the specified file (CRLF conversion is NOT performed)
+-- Throws an error if the file cannot be read
+local function readWholeFile(aFileName)
+	local f = assert(io.open(aFileName, "rb"))
+	local res = f:read("*all")
+	f:close()
+	return res
+end
+
+
+
+
+
+--- Converts the XML-special characters &, < and > into their XML escapes &amp;, &lt; and &gt;
+local function xmlEscape(aText)
+	assert(type(aText) == "string")
+
+	return aText:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+end
+
+
+
+
+
+--- Returns an array-table of values parsed from the specified data source line (CSV format)
+local function parseDataSourceLine(aDataSourceLine)
+	assert(type(aDataSourceLine) == "string")
+
+	aDataSourceLine = aDataSourceLine .. ';'  -- ending comma
+	local res = {}
+	local fieldstart = 1
+	repeat
+		-- next field is quoted? (starts with `"'?)
+		if (string.find(aDataSourceLine, '^"', fieldstart)) then
+			local a, c
+			local i  = fieldstart
+			repeat
+				-- find closing quote
+				a, i, c = string.find(aDataSourceLine, '"("?)', i + 1)
+			until c ~= '"'    -- quote not followed by quote?
+			if not(i) then
+				error("DataSource: unmatched \" in line\n" .. aDataSourceLine)
+			end
+			local f = string.sub(aDataSourceLine, fieldstart+1, i-1)
+			table.insert(res, (string.gsub(f, '""', '"')))
+			fieldstart = string.find(aDataSourceLine, ';', i) + 1
+		else  -- unquoted; find next comma
+			local nexti = string.find(aDataSourceLine, ';', fieldstart)
+			table.insert(res, string.sub(aDataSourceLine, fieldstart, nexti - 1))
+			fieldstart = nexti + 1
+		end
+	until (fieldstart > string.len(aDataSourceLine))
+	return res
+end
+
+
+
+
+
+--- Copies a single file, overwriting the output
+-- The destination folder must already exist
+local function copyFile(aFileNameSrc, aFileNameDst)
+	assert(type(aFileNameSrc) == "string")
+	assert(type(aFileNameDst) == "string")
+
+	local fIn = assert(io.open(aFileNameSrc, "rb"))
+	local data = fIn:read("*all")
+	fIn:close()
+
+	local fOut = assert(io.open(aFileNameDst, "wb"))
+	fOut:write(data)
+	fOut:close()
+end
+
+
+
+
+
+--- Recursively copies the files from the source to the destination folder
+-- Destination subfolders are created as-needed
+local function copyFolder(aFolderSrc, aFolderDst)
+	assert(type(aFolderSrc) == "string")
+	assert(type(aFolderDst) == "string")
+
+	for fnam in lfs.dir(aFolderSrc) do
+		if ((fnam ~= ".") and (fnam ~= "..")) then
+			local mode = lfs.attributes(aFolderSrc .. "/" .. fnam, "mode")
+			if (mode == "file") then
+				copyFile(aFolderSrc .. "/" .. fnam, aFolderDst .. "/" .. fnam)
+			elseif (mode == "directory") then
+				lfs.mkdir(aFolderDst .. "/" .. fnam)
+				copyFolder(aFolderSrc .. "/" .. fnam, aFolderDst .. "/" .. fnam)
+			end
+		end
+	end
+end
+
+
+
+
+
+--- Recursively deletes everything in the specified folder
+local function deleteFolder(aFolder)
+	assert(type(aFolder) == "string")
+
+	for fnam in lfs.dir(aFolder) do
+		if ((fnam ~= ".") and (fnam ~= "..")) then
+			local mode = lfs.attributes(aFolder .. "/" .. fnam, "mode")
+			if (mode == "file") then
+				os.remove(aFolder .. "/" .. fnam)
+			elseif (mode == "directory") then
+				deleteFolder(aFolder .. "/" .. fnam)
+			end
+		end
+	end
+	lfs.rmdir(aFolder)
+end
+
+
+
+
+
+local function processTemplate(aTemplateData, aColumns)
+	assert(type(aTemplateData) == "string")
+	assert(type(aColumns) == "table")
+	assert(aColumns[1])  -- At least a valid filename column
+
+	return (aTemplateData:gsub("(%${column%-(%d+)})",
+		function (aToken, aColIdx)
+			aColIdx = tonumber(aColIdx) or error("Invalid replacement token: " .. aToken)
+			if (aColumns[aColIdx]) then
+				return aColumns[aColIdx]
+			else
+				print("WARNING: column " .. aColIdx .. " is missing in the data source.")
+				-- error("Invalid replacement token, column " .. aColIdx .. " not present in the source data.")
+			end
+		end
+	))
+end
+
+
+
+
+
+--- Creates an output out of the template for the specified single data source line
+local function processSingleOutput(aDataSourceLine, aTemplateData)
+	assert(type(aDataSourceLine) == "string")
+	assert(type(aTemplateData) == "string")
+
+	local columns = parseDataSourceLine(aDataSourceLine)
+	if (not(columns) or not(columns[1])) then
+		error("Failed to parse data source line:\n" .. aDataSourceLine:sub(1, 200))
+	end
+
+	-- Write the filled-template into the single output file that is being changed:
+	local f = assert(io.open(gWorkFolder .. gTemplatedFileName, "wb"))
+	f:write(processTemplate(aTemplateData, columns))
+	f:close()
+
+	-- Pack the output folder:
+	assert(run7Z("a " .. columns[gFileNameColumnIdx] .. ".docx ./" .. gWorkFolder .. "/* -r"))
+end
+
+
+
+
+
+----------------------------------------------------------------------------------------------------------
+--- MAIN
+
+-- Get the commandline params:
+local args = {...}
+if (not(args) or (#args < 2)) then
+	error("This script needs at least two arguments, the template file and the datasource file.\n\nRun as:\n" .. tostring(arg[0]) .. " Template.docx DataSource.csv\n")
+end
+
+-- Check whether 7zip is available:
+local check7z, err = run7Z("i")  -- 7z information about supported formats
+if not(check7z) then
+	error("Failed to execute 7zip:\n" .. tostring(err))
+end
+if not(check7z:find(" zip ")) then
+	error("This script requires 7zip to be installed and in path; the test for 7z presence returned the following:\n" .. check7z:sub(1, 200))
+end
+print("7zip found and working.")
+
+-- Check the template file, if it exists; with optional extension:
+local templateFileName = args[1]
+if (lfs.attributes(templateFileName, "mode") ~= "file") then
+	-- Try adding the extension:
+	templateFileName = templateFileName .. ".docx"
+	if (lfs.attributes(templateFileName, "mode") ~= "file") then
+		error("The template file " .. args[1] .. " was not found")
+	end
+end
+
+-- Check the datasource file, if it exists; with optional extension:
+local dataSourceFileName = args[2]
+if (lfs.attributes(dataSourceFileName, "mode") ~= "file") then
+	-- Try adding the extension:
+	dataSourceFileName = dataSourceFileName .. ".csv"
+	if (lfs.attributes(dataSourceFileName, "mode") ~= "file") then
+		error("The data source file " .. args[2] .. " was not found")
+	end
+end
+
+-- Parse the NumSkipRows optional parameter:
+local numSkipRows = tonumber(arg[3] or "0")
+if not(numSkipRows) then
+	error("The specified 3rd param, the number of rows to skip, is not a number:\n" .. tostring(arg[3]))
+end
+
+-- Create tmp folders where to work:
+lfs.mkdir(gTemplateFolder)
+lfs.mkdir(gWorkFolder)
+
+-- Unpack the template, load template data:
+assert(run7Z("x " .. templateFileName .. " -y -o" .. gTemplateFolder))
+copyFolder(gTemplateFolder, gWorkFolder)
+local templateData = readWholeFile(gTemplateFolder .. gTemplatedFileName)
+
+-- Create the outputs, one by one:
+local fDS = assert(io.open(dataSourceFileName, "r"))
+for line in fDS:lines() do
+	if (numSkipRows > 0) then
+		print("Skipping   " .. line:sub(1, 40))
+		numSkipRows = numSkipRows - 1
+	else
+		print("Processing " .. line:sub(1, 40))
+		processSingleOutput(line, templateData)
+	end
+end
+fDS:close()
+
+
+-- Clean up the temp / working folders:
+deleteFolder(gTemplateFolder)
+deleteFolder(gWorkFolder)
