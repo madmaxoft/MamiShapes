@@ -164,12 +164,34 @@ local shapeDefs =
 	},
 
 	{
+		name = "circle_5",
+		{
+			circle(0, 0, 1),
+		},
+		{
+			symmetry = 5,
+			line(0, 0, 0, 1),
+		},
+	},
+
+	{
 		name = "circle_8",
 		{
 			circle(0, 0, 1),
 		},
 		{
 			symmetry = 8,
+			line(0, 0, 0, 1),
+		},
+	},
+
+	{
+		name = "circle_10",
+		{
+			circle(0, 0, 1),
+		},
+		{
+			symmetry = 10,
 			line(0, 0, 0, 1),
 		},
 	},
