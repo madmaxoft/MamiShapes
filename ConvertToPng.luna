@@ -117,7 +117,7 @@ for _, pair in ipairs(toProcess) do
 		processes[idx]:close()
 		processes[idx] = nil
 	end
-	local cmdLine = "\"" .. config.inkscapeExe .. "\" -z -e " .. pair.dst .. " -h " .. height .. " " .. pair.src
+	local cmdLine = "\"" .. config.inkscapeExe .. "\" " .. pair.src .. " -h " .. height .. " -o " .. pair.dst
 	print("Processing " .. pair.src)
 	processes[idx] = io.popen(cmdLine, "r")
 	idx = idx + 1
