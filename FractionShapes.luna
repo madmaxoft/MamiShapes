@@ -1,0 +1,555 @@
+-- FracionShapes.luna
+
+-- Generates SVG files of the shapes that are split into symmetrical fractions
+
+
+
+
+
+local svg = require("SvgWriter")
+
+
+
+
+--- The amount of empty space (margin) around the shape [pixels]
+local base = 10
+
+--- The stroke width ("line width") of the shape [pixels]
+local strokeWidth = 10
+
+--- The size of the actual shape [pixels]
+local pictureSize = 1000
+
+--- The relative sharpness of the stars [0 .. 1]
+local starSharpness = 0.55
+
+
+
+
+
+
+--- Scale for the geometry functions
+-- The coords in the shape array are in the [-1 .. 1] range, this ratio converts those to the drawing coords
+local scale = pictureSize / 2
+
+
+
+
+
+local circle = function(cx, cy, radius)
+	return function(aDrawing)
+		aDrawing:addCircle(base + (1 + cx) * scale, base + (1 + cy) * scale, radius * scale, {fill = "none"})
+	end
+end
+
+
+
+
+
+local line = function(x1, y1, x2, y2)
+	return function(aDrawing)
+		aDrawing:addLine(
+			base + (1 + x1) * scale, base + (1 + y1) * scale,
+			base + (1 + x2) * scale, base + (1 + y2) * scale
+		)
+	end
+end
+
+
+
+
+
+local arc = function (x1, y1, x2, y2, rx, ry, angle, isLarge, sweepFlag)
+	return function(aDrawing)
+		aDrawing:addArc(
+			base + (1 + x1) * scale, base + (1 + y1) * scale,
+			base + (1 + x2) * scale, base + (1 + y2) * scale,
+			rx * scale, ry * scale,
+			angle, isLarge, sweepFlag, {fill = "none"}
+		)
+	end
+end
+
+
+
+
+-- Useful constants:
+local sin60 = math.sin(60 * math.pi / 180)
+local sin30 = math.sin(30 * math.pi / 180)
+local pentaX = math.sin(2 * math.pi / 5)
+local pentaY = math.cos(2 * math.pi / 5)
+local pentaTop = -math.cos(math.pi / 5)
+local star5x = (1 - starSharpness) * math.sin(math.pi / 5)
+local star5y = (1 - starSharpness) * math.cos(math.pi / 5)
+local star6x = (1 - starSharpness) * math.sin(math.pi / 6)
+local star6y = (1 - starSharpness) * math.cos(math.pi / 6)
+local octaX = math.sin(2 * math.pi / 8)
+local octaY = math.cos(2 * math.pi / 8)
+local third = 1 / 3
+
+
+
+
+
+--- The individual shapes
+-- An array of items, each item represents one drawing
+-- Each drawing is an array of shapes with symmetry (no symmetry = single instance)
+local shapeDefs =
+{
+	-- Circle fractions:
+	{
+		name = "circle_2a",
+		{
+			circle(0, 0, 1),
+		},
+		{
+			symmetry = 2,
+			line(0, 0, 0, 1),
+		},
+	},
+
+	{
+		name = "circle_2b",
+		{
+			circle(0, 0, 1),
+		},
+		{
+			symmetry = 2,
+			line(0, 0, sin60, sin30),
+		},
+	},
+
+	{
+		name = "circle_3",
+		{
+			circle(0, 0, 1),
+		},
+		{
+			symmetry = 3,
+			line(0, 0, 0, 1),
+		},
+	},
+
+	{
+		name = "circle_4a",
+		{
+			circle(0, 0, 1),
+		},
+		{
+			symmetry = 4,
+			line(0, 0, 0, 1),
+		},
+	},
+
+	{
+		name = "circle_4b",
+		{
+			circle(0, 0, 1),
+		},
+		{
+			symmetry = 4,
+			line(0, 0, sin60, sin30),
+		},
+	},
+
+	{
+		name = "circle_6",
+		{
+			circle(0, 0, 1),
+		},
+		{
+			symmetry = 6,
+			line(0, 0, 0, 1),
+		},
+	},
+
+	{
+		name = "circle_8",
+		{
+			circle(0, 0, 1),
+		},
+		{
+			symmetry = 8,
+			line(0, 0, 0, 1),
+		},
+	},
+
+	-------------------------------------------------------------------------------------
+	-- Polygon fractions:
+	{
+		name = "3gon_2",
+		{
+			symmetry = 3,
+			line(0, -1, sin60, sin30),
+		},
+		{
+			line(0, -1, 0, sin30),
+		},
+	},
+
+	{
+		name = "3gon_3",
+		{
+			symmetry = 3,
+			line(0, -1, sin60, sin30),
+			line(0, 0, 0, -1),
+		},
+	},
+
+	{
+		name = "3gon_4",
+		{
+			symmetry = 3,
+			line(0, -1, sin60, sin30),
+			line(0, sin30, sin60 / 2, -sin30 / 2),
+		},
+	},
+
+	{
+		name = "4gon_4a",
+		{
+			line(-1, -1,  1, -1),
+			line( 1, -1,  1,  1),
+			line( 1,  1, -1,  1),
+			line(-1,  1, -1, -1),
+
+			line(-1, -1, 1,  1),
+			line(-1,  1, 1, -1),
+		},
+	},
+
+	{
+		name = "4gon_4b",
+		{
+			line(-1, -1,  1, -1),
+			line( 1, -1,  1,  1),
+			line( 1,  1, -1,  1),
+			line(-1,  1, -1, -1),
+
+			line(-1, 0, 1,  0),
+			line( 0, 1, 0, -1),
+		},
+	},
+
+	{
+		name = "4gon_4c",
+		{
+			line(-1, -1,  1, -1),
+			line( 1, -1,  1,  1),
+			line( 1,  1, -1,  1),
+			line(-1,  1, -1, -1),
+
+			line(-1, -0.5, 1, -0.5),
+			line(-1,  0,   1,  0),
+			line(-1,  0.5, 1,  0.5),
+		},
+	},
+
+	{
+		name = "4gon_9",
+		{
+			line(-1, -1,  1, -1),
+			line( 1, -1,  1,  1),
+			line( 1,  1, -1,  1),
+			line(-1,  1, -1, -1),
+
+			line(-1, -third, 1, -third),
+			line(-1,  third, 1,  third),
+			line(-third, -1, -third, 1),
+			line( third, -1,  third, 1),
+		},
+	},
+
+	{
+		name = "5gon_2",
+		{
+			symmetry = 5,
+			line(0, 1, pentaX, pentaY),
+		},
+		{
+			line(0, 1, 0, pentaTop),
+		},
+	},
+
+	{
+		name = "5gon_5",
+		{
+			symmetry = 5,
+			line(0, 0, pentaX, pentaY),
+			line(0, 1, pentaX, pentaY),
+		},
+	},
+
+	{
+		name = "5gon_10",
+		{
+			symmetry = 5,
+			line(0, 0, pentaX, pentaY),
+			line(0, 1, pentaX, pentaY),
+			line(0, 0, pentaX / 2, (1 + pentaY) / 2),
+		},
+	},
+
+	{
+		name = "6gon_2",
+		{
+			symmetry = 6,
+			line(0, 1, sin60, 0.5),
+		},
+		{
+			line(0, 1, 0, -1),
+		},
+	},
+
+	{
+		name = "6gon_3a",
+		{
+			symmetry = 6,
+			line(0, 1, sin60, 0.5),
+		},
+		{
+			symmetry = 3,
+			line(0, 0, sin60, 0),
+		},
+	},
+
+	{
+		name = "6gon_3b",
+		{
+			symmetry = 6,
+			line(0, 1, sin60, 0.5),
+		},
+		{
+			symmetry = 3,
+			line(0, 0, 0, 1),
+		},
+	},
+
+	{
+		name = "6gon_4",
+		{
+			symmetry = 6,
+			line(0, 1, sin60, 0.5),
+		},
+		{
+			line(0, 1, 0, -1),
+			line(sin60, 0, -sin60, 0),
+		},
+	},
+
+	{
+		name = "6gon_6a",
+		{
+			symmetry = 6,
+			line(0, 0, 0, 1),
+			line(0, 1, sin60, 0.5),
+		},
+	},
+
+	{
+		name = "6gon_6b",
+		{
+			symmetry = 6,
+			line(0, 1, sin60, 0.5),
+			line(0, 0, sin60, 0),
+		},
+	},
+
+	{
+		name = "6gon_12",
+		{
+			symmetry = 6,
+			line(0, 1, sin60, 0.5),
+			line(0, 0, sin60, 0),
+			line(0, 0, 0, 1),
+		},
+	},
+
+	{
+		name = "8gon_2",
+		{
+			symmetry = 8,
+			line(0, 1, octaX, octaY),
+		},
+		{
+			line(0, 1, 0, -1),
+		},
+	},
+
+	{
+		name = "8gon_4a",
+		{
+			symmetry = 8,
+			line(0, 1, octaX, octaY),
+		},
+		{
+			symmetry = 4,
+			line(0, 0, 0, -1),
+		},
+	},
+
+	{
+		name = "8gon_4b",
+		{
+			symmetry = 8,
+			line(0, 1, octaX, octaY),
+		},
+		{
+			symmetry = 4,
+			line(0, 0, octaX / 2, (1 + octaY) / 2),
+		},
+	},
+
+	{
+		name = "8gon_8a",
+		{
+			symmetry = 8,
+			line(0, 1, octaX, octaY),
+		},
+		{
+			symmetry = 8,
+			line(0, 0, 0, -1),
+		},
+	},
+
+	{
+		name = "8gon_8b",
+		{
+			symmetry = 8,
+			line(0, 1, octaX, octaY),
+		},
+		{
+			symmetry = 8,
+			line(0, 0, octaX / 2, (1 + octaY) / 2),
+		},
+	},
+
+	-------------------------------------------------------------------------------------
+	-- Star fractions:
+	{
+		name = "5star_2",
+		{
+			symmetry = 5,
+			line(     0,      1, star5x, star5y),
+			line(star5x, star5y, pentaX, pentaY),
+		},
+		{
+			line(0, 1, 0, -1 + starSharpness),
+		},
+	},
+
+	{
+		name = "5star_5a",
+		{
+			symmetry = 5,
+			line(     0,      1, star5x, star5y),
+			line(star5x, star5y, pentaX, pentaY),
+			line(0, 0, 0, -1 + starSharpness),
+		},
+	},
+
+	{
+		name = "5star_5b",
+		{
+			symmetry = 5,
+			line(     0,      1, star5x, star5y),
+			line(star5x, star5y, pentaX, pentaY),
+			line(0, 0, 0, 1),
+		},
+	},
+
+	{
+		name = "5star_10",
+		{
+			symmetry = 5,
+			line(     0,      1, star5x, star5y),
+			line(star5x, star5y, pentaX, pentaY),
+			line(0, 0, 0, 1),
+			line(0, 0, 0, -1 + starSharpness),
+		},
+	},
+
+	{
+		name = "6star_2",
+		{
+			symmetry = 6,
+			line(     0,      1, star6x, star6y),
+			line(star6x, star6y,  sin60,    0.5),
+		},
+		{
+			line(0, 1, 0, -1),
+		},
+	},
+
+	{
+		name = "6star_3",
+		{
+			symmetry = 6,
+			line(     0,      1, star6x, star6y),
+			line(star6x, star6y,  sin60,    0.5),
+		},
+		{
+			symmetry = 3,
+			line(0, 1, 0, 0),
+		},
+	},
+
+	{
+		name = "6star_6a",
+		{
+			symmetry = 6,
+			line(     0,      1, star6x, star6y),
+			line(star6x, star6y,  sin60,    0.5),
+
+			line(0, 1, 0, 0),
+		},
+	},
+
+	{
+		name = "6star_6b",
+		{
+			symmetry = 6,
+			line(     0,      1, star6x, star6y),
+			line(star6x, star6y,  sin60,    0.5),
+
+			line(star6x, star6y, 0, 0),
+		},
+	},
+
+	{
+		name = "6star_12",
+		{
+			symmetry = 6,
+			line(     0,      1, star6x, star6y),
+			line(star6x, star6y,  sin60,    0.5),
+
+			line(star6x, star6y, 0, 0),
+			line(0, 1, 0, 0),
+		},
+	},
+
+}
+
+
+
+
+
+for idx, shapeDef in ipairs(shapeDefs) do
+	local drawing = svg.new(2 * base + 2 * scale, 2 * base + 2 * scale)
+	drawing:beginGroup("main", { stroke = "#000", ["stroke-width"] = strokeWidth})
+		for sgIdx, sg in ipairs(shapeDef) do
+			local grpName = "grp" .. sgIdx
+			drawing:beginGroup(grpName)
+				for _, shape in ipairs(sg) do
+					shape(drawing)
+				end
+			drawing:endGroup()
+			local center = string.format("%s, %s", base + scale, base + scale)
+			for rot = 2, (sg.symmetry or 1) do
+				local angle = (rot - 1) * 360 / (sg.symmetry or 1)
+				drawing:useGroup(grpName, "rotate(" .. angle .. ",  " .. center .. ")")
+			end  -- for rot
+		end  -- for sg
+	drawing:endGroup()
+	drawing:writeToFile((shapeDef.name or string.format("unnamed_%02d", idx)) .. ".svg")
+end
