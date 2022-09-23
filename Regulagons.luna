@@ -1,4 +1,4 @@
--- Generates SVG files for regular polygons (n = 3 .. 30)
+-- Generates SVG files for regular polygons (n = 3 .. 31)
 
 
 
@@ -45,6 +45,6 @@ end
 
 
 
-for i = 3, 30 do
+for i = 3, 31 do
 	createPolygon(i)
 end
