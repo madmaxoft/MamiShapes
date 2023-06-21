@@ -1,0 +1,100 @@
+-- CutoutCircles.luna
+
+-- Generates circles with cutouts for "rotating sliding window"
+-- Each image consists of two circles, one with the cutouts, another with dividers for the backgrounds
+
+
+
+
+--- The diameter of the outer circle, in pixels:
+local outerDiameter = 2000
+
+--- The diameter of the outer chord used for the cutout, in pixels:
+local cutoutOuterDiameter = 1600
+
+--- The diameter of the inner chord used for the cutout, in pixels:
+local cutoutInnerDiameter = 500
+
+--- Width of the lines, in pixels:
+local strokeWidth = 5
+
+--- Number of pixels added on all 4 sides of the image, and between the two circles:
+local edgeSize = 10
+
+--- Minimum and maximum number of radial slices:
+local minSlices = 3
+local maxSlices = 15
+
+
+
+
+
+package.path = "./?.lua;" .. package.path  -- Prefer loading modules from current dir
+local svg = require("SvgWriter")
+
+
+
+
+
+local function exportSlices(aNumSlices)
+	assert(type(aNumSlices) == "number")
+	
+	local drawing = svg.new(
+		outerDiameter * 2 + strokeWidth * 4 + edgeSize * 3,
+		outerDiameter + strokeWidth * 4 + edgeSize * 2
+	)
+	
+	local center1x = outerDiameter / 2 + strokeWidth + edgeSize
+	local center1y = center1x
+	local center2x = outerDiameter * 1.5 + 3 * strokeWidth + edgeSize * 2
+	local center2y = center1y
+	local sliceAngle = math.pi / aNumSlices
+
+	drawing:beginGroup("main", { stroke = "#000", style = "fill: none", ["stroke-width"] = strokeWidth})
+		drawing:addCircle(center1x, center1y, outerDiameter / 2)
+		drawing:addCircle(center2x, center2y, outerDiameter / 2)
+		local cutoutTLx = center1x - cutoutOuterDiameter * math.sin(sliceAngle) / 2
+		local cutoutTy = center1y - cutoutOuterDiameter * math.cos(sliceAngle) / 2
+		local cutoutTRx = center1x + cutoutOuterDiameter * math.sin(sliceAngle) / 2
+		local cutoutBLx = center1x - cutoutInnerDiameter * math.sin(sliceAngle) / 2
+		local cutoutBy = center1y - cutoutInnerDiameter * math.cos(sliceAngle) / 2
+		local cutoutBRx = center1x + cutoutInnerDiameter * math.sin(sliceAngle) / 2
+		drawing:addLine(cutoutTLx, cutoutTy, cutoutBLx, cutoutBy)
+		drawing:addLine(cutoutTRx, cutoutTy, cutoutBRx, cutoutBy)
+		drawing:addArc(
+			cutoutTLx, cutoutTy,
+			cutoutTRx, cutoutTy,
+			cutoutOuterDiameter / 2, cutoutOuterDiameter / 2,
+			0, false, true
+		)
+		drawing:addArc(
+			cutoutBLx, cutoutBy,
+			cutoutBRx, cutoutBy,
+			cutoutInnerDiameter / 2, cutoutInnerDiameter / 2,
+			0, false, true
+		)
+		drawing:addCircle(center1x, center1y, strokeWidth)
+		drawing:addCircle(center2x, center2y, strokeWidth)
+		
+		local thinLineProps = {["stroke-width"] = 1, ["stroke-dasharray"] = "5, 5"}
+		for i = 0, aNumSlices do
+			local angle = 2 * math.pi * i / aNumSlices + sliceAngle + math.pi
+			drawing:addLine(
+				center2x + math.sin(angle) * cutoutOuterDiameter / 2, center2y + math.cos(angle) * cutoutOuterDiameter / 2,
+				center2x + math.sin(angle) * cutoutInnerDiameter / 2, center2y + math.cos(angle) * cutoutInnerDiameter / 2,
+				thinLineProps
+			)
+		end
+		drawing:addCircle(center2x, center2y, cutoutInnerDiameter / 2, thinLineProps)
+		drawing:addCircle(center2x, center2y, cutoutOuterDiameter / 2, thinLineProps)
+	drawing:endGroup()
+	drawing:writeToFile(string.format("CutoutCircles%02d.svg", aNumSlices))
+end
+
+
+
+
+
+for i = minSlices, maxSlices do
+	exportSlices(i)
+end
