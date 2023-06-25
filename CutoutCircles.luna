@@ -36,8 +36,9 @@ local svg = require("SvgWriter")
 
 
 
-local function exportSlices(aNumSlices)
+local function exportSlices(aNumSlices, aThickDividingLines)
 	assert(type(aNumSlices) == "number")
+	assert(type(aThickDividingLines) == "boolean")
 	
 	local drawing = svg.new(
 		outerDiameter * 2 + strokeWidth * 4 + edgeSize * 3,
@@ -73,22 +74,27 @@ local function exportSlices(aNumSlices)
 			cutoutInnerDiameter / 2, cutoutInnerDiameter / 2,
 			0, false, true
 		)
-		drawing:addCircle(center1x, center1y, strokeWidth)
-		drawing:addCircle(center2x, center2y, strokeWidth)
+		drawing:addCircle(center1x, center1y, 2 * strokeWidth)
+		drawing:addCircle(center2x, center2y, 2 * strokeWidth)
 		
-		local thinLineProps = {["stroke-width"] = 1, ["stroke-dasharray"] = "5, 5"}
+		local dividerProps = {["stroke-dasharray"] = string.format("%d, %d", 5 * strokeWidth, 5 * strokeWidth)}
+		local suffix = "_thick"
+		if not(aThickDividingLines) then
+			dividerProps["stroke-width"] = 1
+			suffix = ""
+		end
 		for i = 0, aNumSlices do
 			local angle = 2 * math.pi * i / aNumSlices + sliceAngle + math.pi
 			drawing:addLine(
 				center2x + math.sin(angle) * cutoutOuterDiameter / 2, center2y + math.cos(angle) * cutoutOuterDiameter / 2,
 				center2x + math.sin(angle) * cutoutInnerDiameter / 2, center2y + math.cos(angle) * cutoutInnerDiameter / 2,
-				thinLineProps
+				dividerProps
 			)
 		end
-		drawing:addCircle(center2x, center2y, cutoutInnerDiameter / 2, thinLineProps)
-		drawing:addCircle(center2x, center2y, cutoutOuterDiameter / 2, thinLineProps)
+		drawing:addCircle(center2x, center2y, cutoutInnerDiameter / 2, dividerProps)
+		drawing:addCircle(center2x, center2y, cutoutOuterDiameter / 2, dividerProps)
 	drawing:endGroup()
-	drawing:writeToFile(string.format("CutoutCircles%02d.svg", aNumSlices))
+	drawing:writeToFile(string.format("CutoutCircles%02d%s.svg", aNumSlices, suffix))
 end
 
 
@@ -96,5 +102,6 @@ end
 
 
 for i = minSlices, maxSlices do
-	exportSlices(i)
+	exportSlices(i, true)
+	exportSlices(i, false)
 end
